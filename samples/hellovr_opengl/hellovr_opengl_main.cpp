@@ -1137,7 +1137,11 @@ void CMainApplication::SetupScene()
 
 	glGenBuffers(1, &m_glSceneVertBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, m_glSceneVertBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertdataarray.size(), &vertdataarray[0], GL_STATIC_DRAW);
+	// 描画しているのはここ説←Bufferを確保しているだけ？
+	printf("[before] vertdataarray size: %d\n", vertdataarray.size());
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertdataarray.size(), &vertdataarray[0], GL_STATIC_DRAW); // creates and initializes a buffer object's data store, GL_ARRAY_BUFFER: Vertex attributes
+	// https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBufferData.xhtml
+	printf("[after] vertdataarray size: %d\n", vertdataarray.size());
 
 	GLsizei stride = sizeof(VertexDataScene);
 	uintptr_t offset = 0;
@@ -1173,7 +1177,7 @@ void CMainApplication::AddCubeToScene(Matrix4 mat, std::vector<float> &vertdata)
 {
 	// Matrix4 mat( outermat.data() );
 
-	Vector4 A = mat * Vector4(0, 0, 0, 1);
+	Vector4 A = mat * Vector4(0, 0, 0, 1); // アフィン変換用の1, w？
 	Vector4 B = mat * Vector4(1, 0, 0, 1);
 	Vector4 C = mat * Vector4(1, 1, 0, 1);
 	Vector4 D = mat * Vector4(0, 1, 0, 1);
@@ -1499,6 +1503,8 @@ void CMainApplication::RenderStereoTargets()
 //-----------------------------------------------------------------------------
 void CMainApplication::RenderScene(vr::Hmd_Eye nEye)
 {
+	// この関数めちゃくちゃ重要！！
+	// 描画はgl prefixの関数で行っている。
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 
@@ -1527,6 +1533,7 @@ void CMainApplication::RenderScene(vr::Hmd_Eye nEye)
 	// ----- Render Model rendering -----
 	glUseProgram(m_unRenderModelProgramID);
 
+	// 各手について
 	for (EHand eHand = Left; eHand <= Right; ((int &)eHand)++)
 	{
 		if (!m_rHand[eHand].m_bShowController || !m_rHand[eHand].m_pRenderModel)
