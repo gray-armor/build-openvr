@@ -847,8 +847,8 @@ void CMainApplication::RenderFrame()
 	{
 		// We want to make sure the glFinish waits for the entire present to complete, not just the submission
 		// of the command. So, we do a clear here right here so the glFinish will wait fully for the swap.
-		glClearColor(0, 0, 0, 1);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClearColor(1, 1, 1, 1);														// 表示領域を消去する色（背景色）の設定
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Windowを塗りつぶす
 	}
 
 	// Flush and wait for swap.
@@ -999,7 +999,7 @@ bool CMainApplication::CreateAllShaders()
 	m_unRenderModelProgramID = CompileGLShader(
 			"render model",
 
-			// vertex shader
+			// vertex shader: 頂点処理 (頂点・図形データ -> ラスタデータ)
 			"#version 410\n"
 			"uniform mat4 matrix;\n"
 			"layout(location = 0) in vec4 position;\n"
@@ -1010,13 +1010,17 @@ bool CMainApplication::CreateAllShaders()
 			"{\n"
 			"	v2TexCoord = v2TexCoordsIn;\n"
 			"	gl_Position = matrix * vec4(position.xyz, 1);\n"
+			// gl_PositionはGLSLの組み込み変数。gl_Positionに入れたデータがパイプラインのラスタライズ段階に送られる。
 			"}\n",
 
-			//fragment shader
+			//fragment shader: 画素処理（ラスタ化後のデータをフレームバッファ）
 			"#version 410 core\n"
 			"uniform sampler2D diffuse;\n"
 			"in vec2 v2TexCoord;\n"
 			"out vec4 outputColor;\n"
+			// フラグメントの色の出力先のout変数をoutputColorとして宣言。
+			// out変数に代入したデータはレンダリングパイプラインの次のステージに送られる（画素データ）
+			// fragment shaderのout変数に代入した値はフレームバッファのカラーバッファに格納される。
 			"void main()\n"
 			"{\n"
 			"   outputColor = texture( diffuse, v2TexCoord);\n"
@@ -1457,6 +1461,7 @@ void CMainApplication::SetupCompanionWindow()
 void CMainApplication::RenderStereoTargets()
 {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	// glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // VR空間の背景色を設定。
 	glEnable(GL_MULTISAMPLE);
 
 	// Left Eye
@@ -1505,7 +1510,8 @@ void CMainApplication::RenderScene(vr::Hmd_Eye nEye)
 {
 	// この関数めちゃくちゃ重要！！
 	// 描画はgl prefixの関数で行っている。
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // ウィンドウを塗りつぶす。引数maskには塗りつぶすバッファを指定する。
+	//
 	glEnable(GL_DEPTH_TEST);
 
 	if (m_bShowCubes)
@@ -1871,8 +1877,6 @@ void CGLRenderModel::Draw()
 
 	glBindVertexArray(0);
 }
-
-#include <iostream>
 
 //-----------------------------------------------------------------------------
 // Purpose:
