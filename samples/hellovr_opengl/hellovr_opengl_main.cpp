@@ -22,6 +22,8 @@
 #include "shared/Matrices.h"
 #include "shared/pathtools.h"
 
+#include <iostream>
+
 #if defined(POSIX)
 #include "unistd.h"
 #endif
@@ -400,6 +402,7 @@ std::string GetTrackedDeviceString(vr::TrackedDeviceIndex_t unDevice, vr::Tracke
 //-----------------------------------------------------------------------------
 bool CMainApplication::BInit()
 {
+	// SDLはマルチメディア開発用API（オーディオなども扱える）
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
 	{
 		printf("%s - SDL could not initialize! SDL Error: %s\n", __FUNCTION__, SDL_GetError());
@@ -476,15 +479,15 @@ bool CMainApplication::BInit()
 	SDL_SetWindowTitle(m_pCompanionWindow, strWindowTitle.c_str());
 
 	// cube array
-	m_iSceneVolumeWidth = m_iSceneVolumeInit;
-	m_iSceneVolumeHeight = m_iSceneVolumeInit;
+	m_iSceneVolumeWidth = m_iSceneVolumeInit;	 // cubeのWidth方向の数指定
+	m_iSceneVolumeHeight = m_iSceneVolumeInit; // cubeのHeight方向の数指定
 	m_iSceneVolumeDepth = m_iSceneVolumeInit;
 
 	m_fScale = 0.3f;
 	m_fScaleSpacing = 4.0f;
 
-	m_fNearClip = 0.1f;
-	m_fFarClip = 30.0f;
+	m_fNearClip = 0.1f; // クリッピングする範囲を指定
+	m_fFarClip = 30.0f; // クリッピングする範囲を指定
 
 	m_iTexture = 0;
 	m_uiVertcount = 0;
@@ -509,7 +512,7 @@ bool CMainApplication::BInit()
 	// なぜコレが必要なのか、何を設定しているのかよくわからない。。
 	vr::VRInput()->SetActionManifestPath(Path_MakeAbsolute("../hellovr_actions.json", Path_StripFilename(Path_GetExecutablePath())).c_str()); // binからの相対パス
 
-	vr::VRInput()->GetActionHandle("/actions/demo/in/HideCubes", &m_actionHideCubes);
+	vr::VRInput()->GetActionHandle("/actions/demo/in/HideCubes", &m_actionHideCubes); // ボタンの操作に対して何を行うかを指定している？
 	vr::VRInput()->GetActionHandle("/actions/demo/in/HideThisController", &m_actionHideThisController);
 	vr::VRInput()->GetActionHandle("/actions/demo/in/TriggerHaptic", &m_actionTriggerHaptic);
 	vr::VRInput()->GetActionHandle("/actions/demo/in/AnalogInput", &m_actionAnalongInput);
@@ -689,6 +692,7 @@ bool CMainApplication::HandleInput()
 
 	// Process SteamVR events
 	vr::VREvent_t event;
+	// PollNextEvent: Returns true and fills the event with the next event on the queue if there is one.
 	while (m_pHMD->PollNextEvent(&event, sizeof(event)))
 	{
 		ProcessVREvent(event);
@@ -795,6 +799,10 @@ void CMainApplication::ProcessVREvent(const vr::VREvent_t &event)
 {
 	switch (event.eventType)
 	{
+	case vr::VREvent_ButtonPress:
+	{
+		dprintf("Device %u button pressed!!!.\n", event.trackedDeviceIndex);
+	}
 	case vr::VREvent_TrackedDeviceDeactivated:
 	{
 		dprintf("Device %u detached.\n", event.trackedDeviceIndex);
@@ -820,10 +828,10 @@ void CMainApplication::RenderFrame()
 		RenderStereoTargets();
 		RenderCompanionWindow();
 
-		vr::Texture_t leftEyeTexture = {(void *)(uintptr_t)leftEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma};
 		// SubmitしないとHMDには描画されない。
 		// preview画面には表示される。
 		// Submitしているから画面が更新されているわけではなさそう。。
+		vr::Texture_t leftEyeTexture = {(void *)(uintptr_t)leftEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma};
 		vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture);
 		vr::Texture_t rightEyeTexture = {(void *)(uintptr_t)rightEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma};
 		vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture);
@@ -840,6 +848,7 @@ void CMainApplication::RenderFrame()
 
 	// SwapWindow
 	{
+		// Preview用の画面を更新(カラーバッファを入れ替える)
 		SDL_GL_SwapWindow(m_pCompanionWindow);
 	}
 
@@ -867,6 +876,7 @@ void CMainApplication::RenderFrame()
 		dprintf("PoseCount:%d(%s) Controllers:%d\n", m_iValidPoseCount, m_strPoseClasses.c_str(), m_iTrackedControllerCount);
 	}
 
+	// HMDの向きを更新
 	UpdateHMDMatrixPose();
 }
 
@@ -877,13 +887,27 @@ void CMainApplication::RenderFrame()
 GLuint CMainApplication::CompileGLShader(const char *pchShaderName, const char *pchVertexShader, const char *pchFragmentShader)
 {
 	// TODO: GLのCompileのロジックを記述する
+	// - glCreateProgram()でプログラムオブジェクトを作成
+	// - glCreateShader()でバーテックスシェーダとフラグメントシェーダのシェーダオブジェクトを作成
+	// - glShaderSource()でシェーダオブジェクトに対してソースプログラムを読み込む
+	// - glCompileShader()でソースプログラムをコンパイル
+	// - glAttachShader()でプログラムオブジェクトにシェーダオブジェクトを組み込む
+	// /LinkProgram()でプログラムオブジェクトをリンクする
 	GLuint unProgramID = glCreateProgram();
+	// glCreateProgmra()でプログラム・オブジェクトを作る。（空）
+	// シェーダのソースプログラムをGPUで実行するために、それらをコンパイル・リンクしてシェーダのプログラムオブジェクトを作る。
 
 	GLuint nSceneVertexShader = glCreateShader(GL_VERTEX_SHADER);
+	// 作られたシェーダオブジェクト名（番号）: 作成できれば「0」でない正の整数、作れなければ「0」を返す。
 	glShaderSource(nSceneVertexShader, 1, &pchVertexShader, NULL);
 	glCompileShader(nSceneVertexShader);
+	// シェーダのソースプログラムをコンパイルしてシェーダオブジェクトを作る。
+	// バーテックス・シェーダのシェーダオブジェクトを作る場合: glCreateShader(GL_VERTEX_SHADER)
+	// フラグメント・シェーダのシェーダオブジェクトを作る場合: glCreateShader(GL_FRAGMENT_SHADER)
 
 	GLint vShaderCompiled = GL_FALSE;
+	// シェーダオブジェクトの情報を取り出す。
+	// GL_COMPILE_STATUSの指定でコンパイルが成功したかどうかを調べられる。
 	glGetShaderiv(nSceneVertexShader, GL_COMPILE_STATUS, &vShaderCompiled);
 	if (vShaderCompiled != GL_TRUE)
 	{
@@ -892,9 +916,12 @@ GLuint CMainApplication::CompileGLShader(const char *pchShaderName, const char *
 		glDeleteShader(nSceneVertexShader);
 		return 0;
 	}
+	// シェーダオブジェクトに読み込まれたソースファイルをコンパイルする。
 	glAttachShader(unProgramID, nSceneVertexShader);
+	// Detachされた時にシェーダオブジェクトが削除される
 	glDeleteShader(nSceneVertexShader); // the program hangs onto this once it's attached
 
+	// フラグメントシェーダのシェーダオブジェクトを作る。
 	GLuint nSceneFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(nSceneFragmentShader, 1, &pchFragmentShader, NULL);
 	glCompileShader(nSceneFragmentShader);
@@ -909,9 +936,11 @@ GLuint CMainApplication::CompileGLShader(const char *pchShaderName, const char *
 		return 0;
 	}
 
+	// シェーダオブジェクトに読み込まれたソースファイルをコンパイルする。
 	glAttachShader(unProgramID, nSceneFragmentShader);
 	glDeleteShader(nSceneFragmentShader); // the program hangs onto this once it's attached
 
+	// プログラム・オブジェクトをリンクする。成功すればシェーダプログラムが完成。
 	glLinkProgram(unProgramID);
 
 	GLint programSuccess = GL_TRUE;
@@ -923,7 +952,9 @@ GLuint CMainApplication::CompileGLShader(const char *pchShaderName, const char *
 		return 0;
 	}
 
+	// 図形を描画する前にglUseProgram()で使うプログラムオブジェクトを指定する。
 	glUseProgram(unProgramID);
+	// 0を指定するとどのプログラムオブジェクトも使われなくなる。
 	glUseProgram(0);
 
 	return unProgramID;
@@ -934,12 +965,15 @@ GLuint CMainApplication::CompileGLShader(const char *pchShaderName, const char *
 //-----------------------------------------------------------------------------
 bool CMainApplication::CreateAllShaders()
 {
+	// 背景
+	// RenderStereoTargetsで使うために用意。
 	m_unSceneProgramID = CompileGLShader(
 			"Scene",
 
-			// Vertex Shader
+			// vertex shader: 頂点処理 (頂点・図形データ -> ラスタデータ)
 			"#version 410\n"
-			"uniform mat4 matrix;\n"
+			// uniform変数はAspectを持つ(aspect=縦横比)
+			"uniform mat4 matrix;\n" // uniform mat4 model;
 			"layout(location = 0) in vec4 position;\n"
 			"layout(location = 1) in vec2 v2UVcoordsIn;\n"
 			"layout(location = 2) in vec3 v3NormalIn;\n"
@@ -948,9 +982,14 @@ bool CMainApplication::CreateAllShaders()
 			"{\n"
 			"	v2UVcoords = v2UVcoordsIn;\n"
 			"	gl_Position = matrix * position;\n"
+			// gl_PositionはGLSLの組み込み変数。gl_Positionに入れたデータがパイプラインのラスタライズ段階に送られる。
 			"}\n",
 
-			// Fragment Shader
+			//fragment shader: 画素処理（ラスタ化後のデータをフレームバッファ）
+			// vec4は４つの数値を格納。R、G、B、A（不透明度）
+			// フラグメントの色の出力先のout変数をoutputColorとして宣言。
+			// out変数に代入したデータはレンダリングパイプラインの次のステージに送られる（画素データ）
+			// fragment shaderのout変数に代入した値はフレームバッファのカラーバッファに格納される。
 			"#version 410 core\n"
 			"uniform sampler2D mytexture;\n"
 			"in vec2 v2UVcoords;\n"
@@ -959,13 +998,14 @@ bool CMainApplication::CreateAllShaders()
 			"{\n"
 			"   outputColor = texture(mytexture, v2UVcoords);\n"
 			"}\n");
-	m_nSceneMatrixLocation = glGetUniformLocation(m_unSceneProgramID, "matrix");
+	m_nSceneMatrixLocation = glGetUniformLocation(m_unSceneProgramID, "matrix"); // matrix変数の位置を取得(glUniformMatrix4fvでデータをセット)
 	if (m_nSceneMatrixLocation == -1)
 	{
 		dprintf("Unable to find matrix uniform in scene shader\n");
 		return false;
 	}
 
+	// コントローラの描画
 	m_unControllerTransformProgramID = CompileGLShader(
 			"Controller",
 
@@ -1010,7 +1050,6 @@ bool CMainApplication::CreateAllShaders()
 			"{\n"
 			"	v2TexCoord = v2TexCoordsIn;\n"
 			"	gl_Position = matrix * vec4(position.xyz, 1);\n"
-			// gl_PositionはGLSLの組み込み変数。gl_Positionに入れたデータがパイプラインのラスタライズ段階に送られる。
 			"}\n",
 
 			//fragment shader: 画素処理（ラスタ化後のデータをフレームバッファ）
@@ -1018,9 +1057,6 @@ bool CMainApplication::CreateAllShaders()
 			"uniform sampler2D diffuse;\n"
 			"in vec2 v2TexCoord;\n"
 			"out vec4 outputColor;\n"
-			// フラグメントの色の出力先のout変数をoutputColorとして宣言。
-			// out変数に代入したデータはレンダリングパイプラインの次のステージに送られる（画素データ）
-			// fragment shaderのout変数に代入した値はフレームバッファのカラーバッファに格納される。
 			"void main()\n"
 			"{\n"
 			"   outputColor = texture( diffuse, v2TexCoord);\n"
@@ -1034,6 +1070,7 @@ bool CMainApplication::CreateAllShaders()
 		return false;
 	}
 
+	// VRレンズのPreview画面
 	m_unCompanionWindowProgramID = CompileGLShader(
 			"CompanionWindow",
 
@@ -1114,6 +1151,7 @@ void CMainApplication::SetupScene()
 	Matrix4 matScale;
 	matScale.scale(m_fScale, m_fScale, m_fScale);
 	Matrix4 matTransform;
+	// 平行移動
 	matTransform.translate(
 			-((float)m_iSceneVolumeWidth * m_fScaleSpacing) / 2.f,
 			-((float)m_iSceneVolumeHeight * m_fScaleSpacing) / 2.f,
@@ -1121,6 +1159,7 @@ void CMainApplication::SetupScene()
 
 	Matrix4 mat = matScale * matTransform;
 
+	// AddCubeToScene
 	for (int z = 0; z < m_iSceneVolumeDepth; z++)
 	{
 		for (int y = 0; y < m_iSceneVolumeHeight; y++)
@@ -1141,8 +1180,8 @@ void CMainApplication::SetupScene()
 
 	glGenBuffers(1, &m_glSceneVertBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, m_glSceneVertBuffer);
-	// 描画しているのはここ説←Bufferを確保しているだけ？
 	printf("[before] vertdataarray size: %d\n", vertdataarray.size());
+	// ここでコード内で生成した頂点データをOpenGLに渡してる。
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertdataarray.size(), &vertdataarray[0], GL_STATIC_DRAW); // creates and initializes a buffer object's data store, GL_ARRAY_BUFFER: Vertex attributes
 	// https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBufferData.xhtml
 	printf("[after] vertdataarray size: %d\n", vertdataarray.size());
@@ -1396,8 +1435,13 @@ bool CMainApplication::SetupStereoRenderTargets()
 	if (!m_pHMD)
 		return false;
 
+	// Suggested size for the intermediate render target that the distortion pulls from.
+	// HMDのディスプレイの横幅と縦幅を取得。
 	m_pHMD->GetRecommendedRenderTargetSize(&m_nRenderWidth, &m_nRenderHeight);
+	printf("HMD's RenderWidth: %d\n", m_nRenderWidth);
+	printf("HMD's RenderHeight: %d\n", m_nRenderHeight);
 
+	// HMDのディスプレイ用のFrameBufferを作成。
 	CreateFrameBuffer(m_nRenderWidth, m_nRenderHeight, leftEyeDesc);
 	CreateFrameBuffer(m_nRenderWidth, m_nRenderHeight, rightEyeDesc);
 
@@ -1456,7 +1500,7 @@ void CMainApplication::SetupCompanionWindow()
 }
 
 //-----------------------------------------------------------------------------
-// Purpose:
+// Purpose:HMDに画面を描画。
 //-----------------------------------------------------------------------------
 void CMainApplication::RenderStereoTargets()
 {
@@ -1466,7 +1510,8 @@ void CMainApplication::RenderStereoTargets()
 
 	// Left Eye
 	glBindFramebuffer(GL_FRAMEBUFFER, leftEyeDesc.m_nRenderFramebufferId);
-	glViewport(0, 0, m_nRenderWidth, m_nRenderHeight);
+	// Viewportの設定: 空間座標系を正規化デバイス座標系（NDC）に変換。
+	glViewport(0, 0, m_nRenderWidth, m_nRenderHeight); // 左下隅
 	RenderScene(vr::Eye_Left);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -1508,18 +1553,21 @@ void CMainApplication::RenderStereoTargets()
 //-----------------------------------------------------------------------------
 void CMainApplication::RenderScene(vr::Hmd_Eye nEye)
 {
-	// この関数めちゃくちゃ重要！！
 	// 描画はgl prefixの関数で行っている。
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // ウィンドウを塗りつぶす。引数maskには塗りつぶすバッファを指定する。
-	//
+	// デプスバッファを有効化（Zバッファ法）
 	glEnable(GL_DEPTH_TEST);
 
 	if (m_bShowCubes)
 	{
-		glUseProgram(m_unSceneProgramID);
-		glUniformMatrix4fv(m_nSceneMatrixLocation, 1, GL_FALSE, GetCurrentViewProjectionMatrix(nEye).get());
+		// キューブの描画
+		glUseProgram(m_unSceneProgramID); // CreateAllShadersで作成したシェーダのNumberを指定。
+		// Uniform = 縦横比率、uniform変数の更新
+		// m_nSceneMatrixLocationが場所
+		glUniformMatrix4fv(m_nSceneMatrixLocation, 1, GL_FALSE, GetCurrentViewProjectionMatrix(nEye).get()); // countは配列でなければ1
 		glBindVertexArray(m_unSceneVAO);
 		glBindTexture(GL_TEXTURE_2D, m_iTexture);
+		// glBindVertexArrayで指定したVAOを基本図形の種類とVAOの位置（すべて描画するなら0）、count: 例えば四角形なら4を指定
 		glDrawArrays(GL_TRIANGLES, 0, m_uiVertcount);
 		glBindVertexArray(0);
 	}
@@ -1549,6 +1597,7 @@ void CMainApplication::RenderScene(vr::Hmd_Eye nEye)
 		Matrix4 matMVP = GetCurrentViewProjectionMatrix(nEye) * matDeviceToTracking;
 		glUniformMatrix4fv(m_nRenderModelMatrixLocation, 1, GL_FALSE, matMVP.get());
 
+		// ここで描画
 		m_rHand[eHand].m_pRenderModel->Draw();
 	}
 
@@ -1560,6 +1609,8 @@ void CMainApplication::RenderScene(vr::Hmd_Eye nEye)
 //-----------------------------------------------------------------------------
 void CMainApplication::RenderCompanionWindow()
 {
+	// HMDのプレビューウィンドウをレンダ
+	// DepthBufferをDisableしている。
 	glDisable(GL_DEPTH_TEST);
 	glViewport(0, 0, m_nCompanionWindowWidth, m_nCompanionWindowHeight);
 
@@ -1572,6 +1623,7 @@ void CMainApplication::RenderCompanionWindow()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	// ここで描画
 	glDrawElements(GL_TRIANGLES, m_uiCompanionWindowIndexSize / 2, GL_UNSIGNED_SHORT, 0);
 
 	// render right eye (second half of index array )
@@ -1580,6 +1632,7 @@ void CMainApplication::RenderCompanionWindow()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	// ここで描画
 	glDrawElements(GL_TRIANGLES, m_uiCompanionWindowIndexSize / 2, GL_UNSIGNED_SHORT, (const void *)(uintptr_t)(m_uiCompanionWindowIndexSize));
 
 	glBindVertexArray(0);
@@ -1594,7 +1647,16 @@ Matrix4 CMainApplication::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
 	if (!m_pHMD)
 		return Matrix4();
 
+	// 視点情報を取得
 	vr::HmdMatrix44_t mat = m_pHMD->GetProjectionMatrix(nEye, m_fNearClip, m_fFarClip);
+
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			printf("m[%d][%d]: %f\n", i, j, mat.m[i][j]);
+		}
+	}
 
 	return Matrix4(
 			mat.m[0][0], mat.m[1][0], mat.m[2][0], mat.m[3][0],
@@ -1611,6 +1673,7 @@ Matrix4 CMainApplication::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye)
 	if (!m_pHMD)
 		return Matrix4();
 
+	// Returns the transform from eye space to the head space
 	vr::HmdMatrix34_t matEyeRight = m_pHMD->GetEyeToHeadTransform(nEye);
 	Matrix4 matrixObj(
 			matEyeRight.m[0][0], matEyeRight.m[1][0], matEyeRight.m[2][0], 0.0,
@@ -1627,10 +1690,11 @@ Matrix4 CMainApplication::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye)
 //-----------------------------------------------------------------------------
 Matrix4 CMainApplication::GetCurrentViewProjectionMatrix(vr::Hmd_Eye nEye)
 {
+	// 視点情報を返している。
 	Matrix4 matMVP;
 	if (nEye == vr::Eye_Left)
 	{
-		matMVP = m_mat4ProjectionLeft * m_mat4eyePosLeft * m_mat4HMDPose;
+		matMVP = m_mat4ProjectionLeft * m_mat4eyePosLeft * m_mat4HMDPose; // m_mat4HMDPoseが更新されていく値
 	}
 	else if (nEye == vr::Eye_Right)
 	{
@@ -1641,7 +1705,7 @@ Matrix4 CMainApplication::GetCurrentViewProjectionMatrix(vr::Hmd_Eye nEye)
 }
 
 //-----------------------------------------------------------------------------
-// Purpose:
+// Purpose: TODO多分HMDの向きを取得して更新
 //-----------------------------------------------------------------------------
 void CMainApplication::UpdateHMDMatrixPose()
 {
@@ -1660,6 +1724,7 @@ void CMainApplication::UpdateHMDMatrixPose()
 			m_rmat4DevicePose[nDevice] = ConvertSteamVRMatrixToMatrix4(m_rTrackedDevicePose[nDevice].mDeviceToAbsoluteTracking);
 			if (m_rDevClassChar[nDevice] == 0)
 			{
+				// Returns the device class of a tracked device
 				switch (m_pHMD->GetTrackedDeviceClass(nDevice))
 				{
 				case vr::TrackedDeviceClass_Controller:
@@ -1689,7 +1754,7 @@ void CMainApplication::UpdateHMDMatrixPose()
 	if (m_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd].bPoseIsValid)
 	{
 		m_mat4HMDPose = m_rmat4DevicePose[vr::k_unTrackedDeviceIndex_Hmd];
-		m_mat4HMDPose.invert();
+		m_mat4HMDPose.invert(); // なぜ？
 	}
 }
 
@@ -1797,15 +1862,32 @@ CGLRenderModel::~CGLRenderModel()
 //-----------------------------------------------------------------------------
 bool CGLRenderModel::BInit(const vr::RenderModel_t &vrModel, const vr::RenderModel_TextureMap_t &vrDiffuseTexture)
 {
+	// 図形の描画手順
+	// (1) glGenVertexArrays()で頂点配列オブジェクトを作る
+	// (2) 作った頂点配列オブジェクトをglBindVertexArray()で結合。
+	// (3) glGenBuffers()で頂点バッファ・オブジェクトを作る。
+	// (4) 頂点バッファオブジェクトをglBindBuffer()で結合
+	// (5) glBufferData()で頂点バッファ・オブジェクトにデータ（頂点属性）を転送。
+	// (6) 頂点バッファオブジェクトをglVertexAttribPointer()でattribute変数に関連付け
+	// (7) 頂点配列オブジェクトを結合して描画命令（ドローコール）を実行。
+
 	// create and bind a VAO to hold state for this model
+	// VAO = vertex array object
 	glGenVertexArrays(1, &m_glVertArray);
 	glBindVertexArray(m_glVertArray);
 
+	// 頂点バッファオブジェクトはGPU側に確保したデータの保存領域を管理。
+	// m_glVertBuffer = vbo
 	// Populate a vertex buffer
+	// 1はvboの個数
 	glGenBuffers(1, &m_glVertBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, m_glVertBuffer);
+	// vboのメモリを確保し、頂点属性データを転送。vrModel.rVertexDataで転送
+	// glBufferDataの最後の引数はGPUの動作最適化のヒント
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vr::RenderModel_Vertex_t) * vrModel.unVertexCount, vrModel.rVertexData, GL_STATIC_DRAW);
 
+	// vboに格納されているデータはattribute変数を介して取り出す。
+	// glEnableVertexArrayによりattribute変数を有効化。
 	// Identify the components in the vertex buffer
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vr::RenderModel_Vertex_t), (void *)offsetof(vr::RenderModel_Vertex_t, vPosition));
@@ -1873,6 +1955,7 @@ void CGLRenderModel::Draw()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, m_glTexture);
 
+	// ここで描画
 	glDrawElements(GL_TRIANGLES, m_unVertexCount, GL_UNSIGNED_SHORT, 0);
 
 	glBindVertexArray(0);
@@ -1883,6 +1966,13 @@ void CGLRenderModel::Draw()
 //-----------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
+	// TODO: 疑問点リストの解消
+	// C++で管理している頂点データはどこでOpenGLに渡されているか: glBufferDataだった
+	// SDLは本当にPreview画面のためだけ？ -> 多分YES
+	// OpenGLのglDraw系で描画されるデータのアウトプット先をどこで指定しているか
+	// CGLRenderModelが何の役割を果たしてるか。
+	// HMDの視点の座標はどこか
+	// レンダリングパイプラインがなぜそれぞれの工程にわかれているのか、もっと簡潔にできないのか
 	printf("Hello, World!\n");
 	CMainApplication *pMainApplication = new CMainApplication(argc, argv);
 
