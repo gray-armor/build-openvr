@@ -336,7 +336,7 @@ void dprintf(const char *fmt, ...)
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
 CMainApplication::CMainApplication(int argc, char *argv[])
-		: m_pCompanionWindow(NULL), m_pContext(NULL), m_nCompanionWindowWidth(640), m_nCompanionWindowHeight(320), m_unSceneProgramID(0), m_unCompanionWindowProgramID(0), m_unControllerTransformProgramID(0), m_unRenderModelProgramID(0), m_pHMD(NULL), m_bDebugOpenGL(false), m_bVerbose(false), m_bPerf(false), m_bVblank(false), m_bGlFinishHack(true), m_glControllerVertBuffer(0), m_unControllerVAO(0), m_unSceneVAO(0), m_nSceneMatrixLocation(-1), m_nControllerMatrixLocation(-1), m_nRenderModelMatrixLocation(-1), m_iTrackedControllerCount(0), m_iTrackedControllerCount_Last(-1), m_iValidPoseCount(0), m_iValidPoseCount_Last(-1), m_iSceneVolumeInit(20), m_strPoseClasses(""), m_bShowCubes(true)
+		: m_pCompanionWindow(NULL), m_pContext(NULL), m_nCompanionWindowWidth(640), m_nCompanionWindowHeight(320), m_unSceneProgramID(0), m_unCompanionWindowProgramID(0), m_unControllerTransformProgramID(0), m_unRenderModelProgramID(0), m_pHMD(NULL), m_bDebugOpenGL(true), m_bVerbose(false), m_bPerf(false), m_bVblank(false), m_bGlFinishHack(true), m_glControllerVertBuffer(0), m_unControllerVAO(0), m_unSceneVAO(0), m_nSceneMatrixLocation(-1), m_nControllerMatrixLocation(-1), m_nRenderModelMatrixLocation(-1), m_iTrackedControllerCount(0), m_iTrackedControllerCount_Last(-1), m_iValidPoseCount(0), m_iValidPoseCount_Last(-1), m_iSceneVolumeInit(20), m_strPoseClasses(""), m_bShowCubes(true)
 {
 
 	for (int i = 1; i < argc; i++)

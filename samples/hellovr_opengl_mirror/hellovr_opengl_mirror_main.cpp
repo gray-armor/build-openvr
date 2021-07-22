@@ -30,10 +30,21 @@ FramebufferDesc leftEyeDesc;
 FramebufferDesc rightEyeDesc;
 uint32_t HMDWidth;
 uint32_t HMDHeight;
-GLuint unSceneProgramID;
+
 vr::TrackedDevicePose_t TrackedDevicePose[vr::k_unMaxTrackedDeviceCount];
+
 Matrix4 mat4DevicePose[vr::k_unMaxTrackedDeviceCount];
 Matrix4 mat4HMDPose;
+Matrix4 mat4ProjectionLeft;
+Matrix4 mat4ProjectionRight;
+Matrix4 mat4EyePoseLeft;
+Matrix4 mat4EyePoseRight;
+
+GLuint SceneProgramID;
+GLuint SceneMatrixLocation;
+GLuint SceneVAO;
+GLuint iTexture;
+unsigned int iVertcount;
 
 bool CreateFrameBuffer(int Width, int Height, FramebufferDesc &framebufferDesc)
 {
@@ -87,10 +98,52 @@ bool SetupStereoRenderTargets()
   return true;
 }
 
+bool SetupTexturemaps()
+{
+  std::string ExecutableDirectory = Path_StripFilename(Path_GetExecutablePath());
+  std::string FullPath = Path_MakeAbsolute("../cube_texture.png", ExecutableDirectory);
+
+  std::vector<unsigned char> imageRGBA;
+  unsigned ImageWidth, ImageHeight;
+}
+
+bool CreateAllShaders()
+{
+  return false;
+}
+
+bool InitGL()
+{
+  if (!CreateAllShaders())
+    return false;
+
+  SetupTexturemaps(); // キューブ表面に貼り付ける画像
+  SetupStereoRenderTargets();
+
+  return true;
+}
+
 bool Init()
 {
+  vr::EVRInitError eError = vr::VRInitError_None;
+  HMD = vr::VR_Init(&eError, vr::VRApplication_Scene);
+  if (eError != vr::VRInitError_None)
+  {
+    printf("Unable to init OpenVR"); // TODO
+  }
+
+  if (!InitGL())
+  {
+    printf("Unable to init OpenGL"); // TODO
+  }
+  if (!vr::VRCompositor())
+  {
+    printf("Unable to init VR Compositor"); // TODO
+  }
   HMDWidth = 100;
   HMDHeight = 100;
+
+  return true;
 }
 
 void Shutdown()
@@ -102,13 +155,35 @@ bool HandleInput()
   return false;
 }
 
-void RenderScene(vr::Hmd_Eye nEye);
+Matrix4 GetCurrentViewProjectionMatrix(vr::Hmd_Eye nEye)
+{
+  Matrix4 matMVP;
+  if (nEye == vr::Eye_Left)
+  {
+    matMVP = mat4ProjectionLeft * mat4EyePoseLeft * mat4HMDPose;
+  }
+  else if (nEye == vr::Eye_Right)
+  {
+    matMVP = mat4ProjectionRight * mat4EyePoseRight * mat4HMDPose;
+  }
+
+  return matMVP;
+}
+
+void RenderScene(vr::Hmd_Eye nEye)
 {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
 
-  glUseProgram(unSceneProgramID);
+  // キューブ(シーン)の描画
+  glUseProgram(SceneProgramID);
   glUniformMatrix4fv(SceneMatrixLocation, 1, GL_FALSE, GetCurrentViewProjectionMatrix(nEye).get());
+  glBindVertexArray(SceneVAO);
+  glBindTexture(GL_TEXTURE_2D, iTexture);
+  glDrawArrays(GL_TRIANGLES, 0, iVertcount);
+  glBindVertexArray(0);
+
+  glUseProgram(0);
 }
 
 void BindFrameBuffer(vr::Hmd_Eye nEye, FramebufferDesc &framebufferDesc)
