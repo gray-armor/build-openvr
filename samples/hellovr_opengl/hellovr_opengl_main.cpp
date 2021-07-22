@@ -1105,7 +1105,8 @@ bool CMainApplication::CreateAllShaders()
 bool CMainApplication::SetupTexturemaps()
 {
 	std::string sExecutableDirectory = Path_StripFilename(Path_GetExecutablePath());
-	std::string strFullPath = Path_MakeAbsolute("../cube_texture.png", sExecutableDirectory);
+	// std::string strFullPath = Path_MakeAbsolute("../cube_texture.png", sExecutableDirectory);
+	std::string strFullPath = Path_MakeAbsolute("../square1.png", sExecutableDirectory);
 
 	std::vector<unsigned char> imageRGBA;
 	unsigned nImageWidth, nImageHeight;
@@ -1152,10 +1153,14 @@ void CMainApplication::SetupScene()
 	matScale.scale(m_fScale, m_fScale, m_fScale);
 	Matrix4 matTransform;
 	// 平行移動
+	// matTransform.translate(
+	// 		-((float)m_iSceneVolumeWidth * m_fScaleSpacing) / 2.f,
+	// 		-((float)m_iSceneVolumeHeight * m_fScaleSpacing) / 2.f,
+	// 		-((float)m_iSceneVolumeDepth * m_fScaleSpacing) / 2.f);
 	matTransform.translate(
-			-((float)m_iSceneVolumeWidth * m_fScaleSpacing) / 2.f,
-			-((float)m_iSceneVolumeHeight * m_fScaleSpacing) / 2.f,
-			-((float)m_iSceneVolumeDepth * m_fScaleSpacing) / 2.f);
+			-4.0,
+			2.0,
+			-3.0);
 
 	Matrix4 mat = matScale * matTransform;
 
@@ -1174,17 +1179,17 @@ void CMainApplication::SetupScene()
 		mat = mat * Matrix4().translate(0, -((float)m_iSceneVolumeHeight) * m_fScaleSpacing, m_fScaleSpacing);
 	}
 	m_uiVertcount = vertdataarray.size() / 5;
+	printf("vertdataarray size: %d\n", vertdataarray.size());
+	printf("Vertex count: %d\n", m_uiVertcount);
 
 	glGenVertexArrays(1, &m_unSceneVAO);
 	glBindVertexArray(m_unSceneVAO);
 
 	glGenBuffers(1, &m_glSceneVertBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, m_glSceneVertBuffer);
-	printf("[before] vertdataarray size: %d\n", vertdataarray.size());
 	// ここでコード内で生成した頂点データをOpenGLに渡してる。
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertdataarray.size(), &vertdataarray[0], GL_STATIC_DRAW); // creates and initializes a buffer object's data store, GL_ARRAY_BUFFER: Vertex attributes
 	// https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBufferData.xhtml
-	printf("[after] vertdataarray size: %d\n", vertdataarray.size());
 
 	GLsizei stride = sizeof(VertexDataScene);
 	uintptr_t offset = 0;
@@ -1973,7 +1978,6 @@ int main(int argc, char *argv[])
 	// CGLRenderModelが何の役割を果たしてるか。
 	// HMDの視点の座標はどこか
 	// レンダリングパイプラインがなぜそれぞれの工程にわかれているのか、もっと簡潔にできないのか
-	printf("Hello, World!\n");
 	CMainApplication *pMainApplication = new CMainApplication(argc, argv);
 
 	if (!pMainApplication->BInit())
