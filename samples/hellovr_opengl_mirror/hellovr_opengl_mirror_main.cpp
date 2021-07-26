@@ -1,7 +1,8 @@
 #include <SDL.h>
 #include <GL/glew.h>
-#include <SDL_opengl.h>
 #include <GL/glu.h>
+#include <SDL_opengl.h>
+
 #include <stdio.h>
 #include <string>
 #include <cstdlib>
@@ -410,8 +411,8 @@ bool Init()
     printf("Unable to init OpenVR"); // TODO
   }
 
-  // SDL_Window *CompanionWindow = SDL_CreateWindow("hellovr", 0, 0, 100, 100, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
-  // SDL_GLContext Context = SDL_GL_CreateContext(CompanionWindow);
+  SDL_Window *CompanionWindow = SDL_CreateWindow("hellovr", 0, 0, 100, 100, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+  SDL_GLContext Context = SDL_GL_CreateContext(CompanionWindow);
 
   glewExperimental = GL_TRUE;
   GLenum nGlewError = glewInit();
@@ -507,7 +508,7 @@ void UpdateHMDMatrixPose()
   if (TrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd].bPoseIsValid)
   {
     mat4HMDPose = mat4DevicePose[vr::k_unTrackedDeviceIndex_Hmd];
-    mat4DevicePose->invert();
+    mat4HMDPose.invert();
   }
 }
 
