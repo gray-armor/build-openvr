@@ -163,7 +163,6 @@ private: // OpenGL bookkeeping
 
 	std::string m_strPoseClasses;												 // what classes we saw poses for this frame
 	char m_rDevClassChar[vr::k_unMaxTrackedDeviceCount]; // for each device, a character representing its class
-
 	int m_iSceneVolumeWidth;
 	int m_iSceneVolumeHeight;
 	int m_iSceneVolumeDepth;
@@ -828,9 +827,6 @@ void CMainApplication::RenderFrame()
 		RenderStereoTargets();
 		RenderCompanionWindow();
 
-		// SubmitしないとHMDには描画されない。
-		// preview画面には表示される。
-		// Submitしているから画面が更新されているわけではなさそう。。
 		vr::Texture_t leftEyeTexture = {(void *)(uintptr_t)leftEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma};
 		vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture);
 		vr::Texture_t rightEyeTexture = {(void *)(uintptr_t)rightEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma};
@@ -1345,7 +1341,7 @@ void CMainApplication::RenderControllerAxes()
 		vertdataarray.push_back(color.x);
 		vertdataarray.push_back(color.y);
 		vertdataarray.push_back(color.z);
-		m_uiControllerVertcount += 2;
+		m_uiControllerVertcount += 3;
 	}
 
 	// Setup the VAO the first time through.
@@ -1509,8 +1505,8 @@ void CMainApplication::SetupCompanionWindow()
 //-----------------------------------------------------------------------------
 void CMainApplication::RenderStereoTargets()
 {
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	// glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // VR空間の背景色を設定。
+	// glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // VR空間の背景色を設定。
 	glEnable(GL_MULTISAMPLE);
 
 	// Left Eye

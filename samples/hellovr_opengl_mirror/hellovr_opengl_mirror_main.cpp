@@ -423,14 +423,14 @@ bool Init()
   }
   glGetError();
 
-  if (!InitGL())
-  {
-    printf("Unable to init OpenGL"); // TODO
-  }
-
   if (!vr::VRCompositor())
   {
     printf("Unable to init VR Compositor"); // TODO
+  }
+
+  if (!InitGL())
+  {
+    printf("Unable to init OpenGL"); // TODO
   }
 
   return true;
@@ -481,7 +481,7 @@ void BindFrameBuffer(vr::Hmd_Eye nEye, FramebufferDesc &framebufferDesc)
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glDisable(GL_MULTISAMPLE);
   glBindFramebuffer(GL_READ_FRAMEBUFFER, framebufferDesc.RenderFramebufferId);
-  glBindFramebuffer(GL_READ_FRAMEBUFFER, framebufferDesc.ResolveFramebufferId);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebufferDesc.ResolveFramebufferId);
   glBlitFramebuffer(0, 0, HMDWidth, HMDHeight, 0, 0, HMDWidth, HMDHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
   glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
